@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Desk Break</title>
+<style>
+  :root[data-theme="dark"]{
+    --bg:#0b0b0f; --surface:#16161d; --surface2:#1f1f28; --border:#2a2a35;
+    --text:#f5f5f7; --text2:#9b9ba6; --text3:#6e6e78;
+    --accent:#5ac8a8; --accent-dim:rgba(90,200,168,.14);
+    --shadow:0 8px 30px rgba(0,0,0,.45);
+  }
+  :root[data-theme="light"]{
+    --bg:#f4f4f6; --surface:#ffffff; --surface2:#f0f0f3; --border:#e4e4e9;
+    --text:#1c1c1e; --text2:#66666e; --text3:#9a9aa2;
+    --accent:#2f9d7d; --accent-dim:rgba(47,157,125,.12);
+    --shadow:0 8px 30px rgba(0,0,0,.08);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,sans-serif;
+    display:flex;justify-content:center;align-items:center;
+    transition:background .3s ease;
+  }
+  #phone{
+    width:min(400px,100vw); height:min(860px,100vh);
+    background:var(--bg); position:relative; overflow:hidden;
+    display:flex;flex-direction:column;
+    transition:background .3s ease;
+  }
+  @media(min-width:440px){
+    #phone{border-radius:44px;border:1px solid var(--border);box-shadow:var(--shadow)}
+  }
+  .screen{
+    position:absolute;inset:0;display:none;flex-direction:column;
+    padding:56px 24px 24px;overflow-y:auto;
+  }
+  .screen.active{display:flex;animation:fadeUp .35s ease}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  @keyframes pop{0%{transform:scale(.9);opacity:0}60%{transform:scale(1.03)}100%{transform:scale(1);opacity:1}}
+
+  h1{font-size:32px;font-weight:700;letter-spacing:-.5px}
+  h2{font-size:24px;font-weight:700;letter-spacing:-.4px}
+  .sub{color:var(--text2);font-size:16px;line-height:1.5;margin-top:10px}
+  .eyebrow{color:var(--accent);font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px}
+
+  .btn{
+    display:block;width:100%;padding:17px;border:none;border-radius:16px;
+    font-size:17px;font-weight:600;font-family:inherit;cursor:pointer;
+    transition:transform .12s ease,opacity .2s;
+  }
+  .btn:active{transform:scale(.97)}
+  .btn-primary{background:var(--accent);color:#08130f}
+  .btn-ghost{background:var(--surface2);color:var(--text)}
+  .btn-text{background:none;color:var(--text2);font-size:15px;padding:12px}
+  .btn:disabled{opacity:.35;pointer-events:none}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:18px}
+
+  /* chips */
+  .chip-grid{display:flex;flex-direction:column;gap:12px;margin-top:24px}
+  .chip{
+    display:flex;align-items:center;gap:14px;padding:16px 18px;
+    background:var(--surface);border:1.5px solid var(--border);border-radius:16px;
+    cursor:pointer;transition:all .18s ease;font-size:16px;font-weight:500;
+  }
+  .chip .ico{font-size:22px;width:30px;text-align:center}
+  .chip .tick{margin-left:auto;width:22px;height:22px;border-radius:50%;
+    border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;
+    font-size:12px;color:transparent;transition:all .18s}
+  .chip.sel{border-color:var(--accent);background:var(--accent-dim)}
+  .chip.sel .tick{background:var(--accent);border-color:var(--accent);color:#08130f}
+
+  /* timer options */
+  .t-opt{
+    display:flex;align-items:center;justify-content:space-between;
+    background:var(--surface);border:1px solid var(--border);border-radius:20px;
+    padding:20px 22px;cursor:pointer;transition:all .15s ease;margin-top:12px;
+  }
+  .t-opt:active{transform:scale(.98)}
+  .t-opt .mins{font-size:26px;font-weight:700;letter-spacing:-.5px}
+  .t-opt .lbl{font-size:13px;color:var(--text2);margin-top:2px}
+  .pts-badge{background:var(--accent-dim);color:var(--accent);font-size:13px;font-weight:600;
+    padding:6px 12px;border-radius:100px;white-space:nowrap}
+
+  /* countdown */
+  #ringwrap{position:relative;width:280px;height:280px;margin:8px auto}
+  #ringwrap svg{transform:rotate(-90deg)}
+  #ringTrack{stroke:var(--surface2)}
+  #ringFill{stroke:var(--accent);transition:stroke-dashoffset 1s linear}
+  #clock{
+    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  }
+  #clock .time{font-size:58px;font-weight:700;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+  #clock .state{color:var(--text2);font-size:14px;margin-top:4px}
+
+  /* reveal */
+  #revealCard{
+    width:240px;height:300px;margin:20px auto;perspective:1000px;cursor:pointer;
+  }
+  #revealInner{
+    width:100%;height:100%;position:relative;transform-style:preserve-3d;
+    transition:transform .7s cubic-bezier(.4,.1,.2,1);
+  }
+  #revealInner.flipped{transform:rotateY(180deg)}
+  .face{
+    position:absolute;inset:0;backface-visibility:hidden;border-radius:24px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+    border:1px solid var(--border);
+  }
+  .face.back{background:linear-gradient(160deg,var(--surface),var(--surface2));font-size:44px}
+  .face.front{background:var(--accent-dim);border-color:var(--accent);transform:rotateY(180deg);padding:20px;text-align:center}
+  .face.front .cat{font-size:13px;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:1px}
+  .face.front .name{font-size:24px;font-weight:700;letter-spacing:-.4px}
+  #shuffleTxt{font-size:15px;color:var(--text2);height:20px;text-align:center;transition:opacity .1s}
+
+  /* segmented */
+  .seg{display:flex;background:var(--surface2);border-radius:14px;padding:4px;margin-top:16px}
+  .seg button{
+    flex:1;padding:12px;border:none;border-radius:11px;background:none;color:var(--text2);
+    font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .18s;
+  }
+  .seg button.on{background:var(--surface);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.18)}
+
+  /* stats */
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:18px}
+  .stat .v{font-size:30px;font-weight:700;letter-spacing:-.5px}
+  .stat .k{font-size:13px;color:var(--text2);margin-top:4px}
+  .stat.wide{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between}
+
+  /* nav */
+  #nav{
+    position:absolute;bottom:0;left:0;right:0;display:none;
+    background:var(--surface);border-top:1px solid var(--border);
+    padding:10px 0 22px;justify-content:space-around;
+  }
+  #nav.show{display:flex}
+  #nav button{
+    background:none;border:none;color:var(--text3);font-family:inherit;font-size:11px;
+    display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;width:80px;
+  }
+  #nav button .i{font-size:22px}
+  #nav button.on{color:var(--accent)}
+
+  /* toast */
+  #toast{
+    position:absolute;top:60px;left:50%;transform:translate(-50%,-20px);
+    background:var(--surface);border:1px solid var(--border);color:var(--text);
+    padding:12px 20px;border-radius:100px;font-size:15px;font-weight:600;
+    opacity:0;pointer-events:none;transition:all .3s ease;box-shadow:var(--shadow);z-index:50;
+  }
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+
+  /* settings rows */
+  .row{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px 0;border-bottom:1px solid var(--border);font-size:16px;
+  }
+  .row:last-child{border-bottom:none}
+  .switch{position:relative;width:50px;height:30px}
+  .switch input{opacity:0;width:0;height:0}
+  .slider{
+    position:absolute;inset:0;background:var(--surface2);border:1px solid var(--border);
+    border-radius:100px;cursor:pointer;transition:.25s;
+  }
+  .slider:before{
+    content:"";position:absolute;height:24px;width:24px;left:2px;top:2px;
+    background:#fff;border-radius:50%;transition:.25s;box-shadow:0 1px 4px rgba(0,0,0,.3);
+  }
+  input:checked + .slider{background:var(--accent);border-color:var(--accent)}
+  input:checked + .slider:before{transform:translateX(20px)}
+
+  .instr{margin-top:16px}
+  .instr li{
+    list-style:none;display:flex;gap:12px;padding:10px 0;color:var(--text2);
+    font-size:15px;line-height:1.45;
+  }
+  .instr li:before{content:"•";color:var(--accent);font-weight:700}
+  .spacer{flex:1}
+  .center{text-align:center}
+  .mt8{margin-top:8px}.mt16{margin-top:16px}.mt24{margin-top:24px}.mt32{margin-top:32px}
+  .task-actions{display:flex;gap:10px;margin-top:14px}
+  .task-actions .btn{flex:1}
+  #logo{
+    width:76px;height:76px;border-radius:22px;background:var(--accent-dim);
+    display:flex;align-items:center;justify-content:center;font-size:38px;margin-bottom:24px;
+    border:1px solid var(--accent);
+  }
+  .today-strip{display:flex;gap:10px;margin-top:20px}
+  .today-strip .card{flex:1;padding:14px;text-align:center}
+  .today-strip .v{font-size:22px;font-weight:700}
+  .today-strip .k{font-size:11px;color:var(--text2);margin-top:2px}
+</style>
+</head>
+<body>
+<div id="phone">
+
+  <!-- 1. WELCOME -->
+  <div class="screen" id="s-welcome">
+    <div class="spacer"></div>
+    <div id="logo">🪑</div>
+    <p class="eyebrow">Desk Break</p>
+    <h1 class="mt8">You weren't built to sit still all day.</h1>
+    <p class="sub">Set timers around your workday and Desk Break will remind you to step away. Move for 5 or 10 minutes at a time, and collect Move Points.</p>
+    <div class="spacer"></div>
+    <button class="btn btn-primary" onclick="go('s-prefs')">Get Started</button>
+  </div>
+
+  <!-- 2. PREFS -->
+  <div class="screen" id="s-prefs">
+    <p class="eyebrow">Today's setup</p>
+    <h2 class="mt8">What are you open to today?</h2>
+    <p class="sub">Pick as many as you like. Your movement breaks will only come from these.</p>
+    <div class="chip-grid" id="chipGrid"></div>
+    <div class="spacer"></div>
+    <button class="btn btn-primary mt24" id="prefsDone" onclick="savePrefs()">Continue</button>
+  </div>
+
+  <!-- 3. HOME -->
+  <div class="screen" id="s-home">
+    <p class="eyebrow">Desk Break</p>
+    <h2 class="mt8">Start a timer</h2>
+    <p class="sub">Shorter timers earn more points. More breaks, more movement.</p>
+    <div id="timerOpts"></div>
+    <div class="today-strip">
+      <div class="card"><div class="v" id="hPts">0</div><div class="k">Points today</div></div>
+      <div class="card"><div class="v" id="hBreaks">0</div><div class="k">Breaks</div></div>
+      <div class="card"><div class="v" id="hStreak">0</div><div class="k">Day streak</div></div>
+    </div>
+    <button class="btn btn-text mt16" onclick="go('s-prefs')" id="editPrefsBtn">Edit today's movement types</button>
+    <div style="height:80px"></div>
+  </div>
+
+  <!-- 4. TIMER -->
+  <div class="screen" id="s-timer">
+    <p class="eyebrow center">Focus time</p>
+    <p class="sub center">We'll let you know when it's time to move.</p>
+    <div class="spacer"></div>
+    <div id="ringwrap">
+      <svg width="280" height="280">
+        <circle id="ringTrack" cx="140" cy="140" r="128" fill="none" stroke-width="10"/>
+        <circle id="ringFill" cx="140" cy="140" r="128" fill="none" stroke-width="10" stroke-linecap="round"/>
+      </svg>
+      <div id="clock"><div class="time" id="clockTime">30:00</div><div class="state" id="clockState">Running</div></div>
+    </div>
+    <div class="spacer"></div>
+    <div class="task-actions">
+      <button class="btn btn-ghost" id="pauseBtn" onclick="togglePause()">Pause</button>
+      <button class="btn btn-ghost" onclick="cancelTimer()">Cancel</button>
+    </div>
+    <button class="btn btn-text" onclick="finishTimerEarly()">Finish now (beta testing)</button>
+  </div>
+
+  <!-- 5. REVEAL -->
+  <div class="screen" id="s-reveal">
+    <div class="spacer"></div>
+    <h2 class="center">Time to move</h2>
+    <p class="sub center">Your break is ready.</p>
+    <div id="revealCard" onclick="flipReveal()">
+      <div id="revealInner">
+        <div class="face back">✦</div>
+        <div class="face front">
+          <div class="cat" id="revCat"></div>
+          <div class="name" id="revName"></div>
+        </div>
+      </div>
+    </div>
+    <p id="shuffleTxt"></p>
+    <div class="spacer"></div>
+    <button class="btn btn-primary" id="revealBtn" onclick="flipReveal()">Reveal my movement</button>
+    <button class="btn btn-text" id="revealCont" style="visibility:hidden" onclick="go('s-task')">Continue</button>
+  </div>
+
+  <!-- 6. TASK -->
+  <div class="screen" id="s-task">
+    <p class="eyebrow" id="taskCat"></p>
+    <h2 class="mt8" id="taskName"></h2>
+    <div class="seg" id="durSeg">
+      <button id="d5" class="on" onclick="setDur(5)">5 minutes</button>
+      <button id="d10" onclick="setDur(10)">10 minutes</button>
+    </div>
+    <ul class="instr" id="taskInstr"></ul>
+    <div class="card mt16" style="display:flex;justify-content:space-between;align-items:center">
+      <span style="color:var(--text2);font-size:15px">Points on completion</span>
+      <span class="pts-badge" id="taskPts"></span>
+    </div>
+    <div class="spacer"></div>
+    <div id="moveTimerWrap" style="display:none" class="center mt16">
+      <div style="font-size:44px;font-weight:700;font-variant-numeric:tabular-nums" id="moveClock">5:00</div>
+      <div class="sub" style="margin-top:2px">Keep going, nearly there.</div>
+    </div>
+    <div class="task-actions">
+      <button class="btn btn-ghost" onclick="swapTask()">Give me another</button>
+      <button class="btn btn-ghost" id="startMoveBtn" onclick="startMove()">Start</button>
+    </div>
+    <button class="btn btn-primary mt8" onclick="completeMove()">Done, collect points</button>
+    <button class="btn btn-text" onclick="skipMove()">Skip this break</button>
+  </div>
+
+  <!-- 7. STATS -->
+  <div class="screen" id="s-stats">
+    <p class="eyebrow">Progress</p>
+    <h2 class="mt8">Today</h2>
+    <div class="stat-grid">
+      <div class="stat"><div class="v" id="stPts">0</div><div class="k">Move Points today</div></div>
+      <div class="stat"><div class="v" id="stBreaks">0</div><div class="k">Breaks completed</div></div>
+      <div class="stat"><div class="v" id="stMins">0</div><div class="k">Movement minutes</div></div>
+      <div class="stat"><div class="v" id="stStreak">0</div><div class="k">Day streak</div></div>
+      <div class="stat wide">
+        <div><div class="v" id="stBest">0</div><div class="k">Best day this week (points)</div></div>
+        <div style="font-size:30px">🏆</div>
+      </div>
+    </div>
+    <div style="height:80px"></div>
+  </div>
+
+  <!-- 8. SETTINGS -->
+  <div class="screen" id="s-settings">
+    <p class="eyebrow">Settings</p>
+    <h2 class="mt8">Preferences</h2>
+    <div class="card mt24">
+      <div class="row">
+        <span>Light mode</span>
+        <label class="switch"><input type="checkbox" id="themeToggle" onchange="toggleTheme()"><span class="slider"></span></label>
+      </div>
+      <div class="row" style="cursor:pointer" onclick="go('s-prefs')">
+        <span>Today's movement types</span><span style="color:var(--text3)">›</span>
+      </div>
+      <div class="row" style="cursor:pointer" onclick="resetAll()">
+        <span style="color:#e5766a">Reset all data</span><span style="color:var(--text3)">›</span>
+      </div>
+    </div>
+    <p class="sub mt24" style="font-size:13px">Desk Break beta · v0.1<br>Built to get you off your chair, not into a gym.</p>
+    <div style="height:80px"></div>
+  </div>
+
+  <!-- NAV -->
+  <div id="nav">
+    <button id="nav-home" onclick="go('s-home')"><span class="i">⏱</span>Home</button>
+    <button id="nav-stats" onclick="go('s-stats')"><span class="i">✦</span>Progress</button>
+    <button id="nav-settings" onclick="go('s-settings')"><span class="i">⚙︎</span>Settings</button>
+  </div>
+
+  <div id="toast"></div>
+</div>
+
+<script>
+/* ---------- data ---------- */
+const CATS = [
+  {id:'bodyweight', name:'Bodyweight', ico:'🧍', bonus:10},
+  {id:'walking', name:'Walking', ico:'🚶', bonus:10},
+  {id:'dumbbells', name:'Dumbbells', ico:'🏋️', bonus:15},
+  {id:'bands', name:'Resistance bands', ico:'➰', bonus:15},
+  {id:'stretching', name:'Stretching', ico:'🧘', bonus:5},
+];
+
+const TASKS = {
+  bodyweight: [
+    {name:'Squats', instr:['Stand up from your desk, feet shoulder-width apart','Slow, controlled squats, comfortable depth only','Easy pace, rest whenever you need']},
+    {name:'Wall press-ups', instr:['Hands on a wall at shoulder height','Lower your chest towards the wall, then push back','Smooth and steady, no rush']},
+    {name:'Press-ups', instr:['On the floor or against a desk edge','Do small sets with plenty of rest','Drop to knees any time it feels hard']},
+    {name:'Lunges', instr:['Step forward into a gentle lunge, alternate legs','Hold a chair for balance if useful','Keep it comfortable, not burning']},
+    {name:'Glute bridges', instr:['Lie on your back, knees bent','Lift hips, squeeze, lower slowly','Great counter to a day of sitting']},
+    {name:'Calf raises', instr:['Stand tall, rise onto your toes, lower slowly','Hold the desk for balance','Nice and rhythmic, no need to count']},
+    {name:'Step-ups', instr:['Use a stair or sturdy step','Step up and down at a relaxed pace','Swap the leading leg halfway']},
+    {name:'Plank', instr:['Short holds. 20 to 30 seconds is plenty','Rest between holds','Keep breathing, keep it easy']},
+  ],
+  walking: [
+    {name:'Walk outside', instr:['Leave the desk, get some fresh air','A relaxed pace is perfect','Leave the phone in your pocket if you can']},
+    {name:'Walk around the block', instr:['Pick a simple loop and just go','No pace targets. This is a reset, not a workout','Notice something you usually walk past']},
+  ],
+  dumbbells: [
+    {name:'Goblet squats', instr:['Hold one dumbbell at your chest','Slow squats to a comfortable depth','Light weight, easy pace']},
+    {name:'Dumbbell rows', instr:['One hand on the desk for support','Row the dumbbell to your hip, lower slowly','Swap sides halfway']},
+    {name:'Romanian deadlifts', instr:['Soft knees, hinge at the hips','Lower the dumbbells down your legs, stand tall','Feel a gentle stretch, nothing more']},
+    {name:'Shoulder press', instr:['Light dumbbells at shoulder height','Press up smoothly, lower with control','Small sets, plenty of rest']},
+    {name:'Bicep curls', instr:['Relaxed curls, light weight','Slow on the way down','No need to reach failure, just move']},
+    {name:'Reverse lunges', instr:['Hold light dumbbells at your sides','Step back into a gentle lunge, alternate legs','Use the desk for balance if needed']},
+  ],
+  bands: [
+    {name:'Band pull-aparts', instr:['Hold the band at chest height','Pull apart, squeeze your shoulder blades','Brilliant for desk posture']},
+    {name:'Band rows', instr:['Loop the band around something sturdy','Row towards you, pause, release slowly','Keep shoulders relaxed']},
+    {name:'External rotations', instr:['Elbow tucked at your side','Rotate your forearm out against the band','Gentle. This one is about the small muscles']},
+    {name:'Band squats', instr:['Stand on the band, hold the ends at shoulders','Easy squats at a relaxed rhythm','Comfortable depth only']},
+    {name:'Band presses', instr:['Band behind your back, press forwards','Smooth reps, controlled return','Light tension is all you need']},
+  ],
+  stretching: [
+    {name:'Seated posture reset', instr:['Sit tall, roll shoulders back and down','A few slow deep breaths','Gently tuck the chin and lengthen the neck']},
+    {name:'Shoulder blade squeezes', instr:['Squeeze shoulder blades together, hold 5 seconds','Release slowly, repeat','Undo the keyboard hunch']},
+    {name:'Neck mobility', instr:['Slow nods, gentle side tilts, easy half-circles','Never force the range','Move within what feels good']},
+    {name:'Wrist mobility', instr:['Circles both directions','Gentle stretches, palm up and palm down','A gift to your typing hands']},
+    {name:'Standing hip stretch', instr:['Stand, step one foot back, press hips forward gently','Hold 20 to 30 seconds each side','Sitting shortens the hips. This opens them up']},
+    {name:'Calf raises', instr:['Slow rises onto your toes, slow lowers','Hold the stretch at the bottom on a step if you have one','Easy and rhythmic']},
+    {name:'Wall sit', instr:['Back against the wall, slide to a comfortable height','Short holds with rests','Higher is easier, no heroics needed']},
+  ],
+};
+
+const TIMER_PTS = {30:10, 45:8, 60:5};
+const BASE_PTS = {5:20, 10:40};
+
+/* ---------- storage ---------- */
+const mem = {};
+const store = {
+  get(k,d){ try{const v=localStorage.getItem('dbk_'+k); return v?JSON.parse(v):d}catch(e){return k in mem?mem[k]:d} },
+  set(k,v){ try{localStorage.setItem('dbk_'+k,JSON.stringify(v))}catch(e){mem[k]=v} },
+  clear(){ try{Object.keys(localStorage).filter(k=>k.startsWith('dbk_')).forEach(k=>localStorage.removeItem(k))}catch(e){} for(const k in mem)delete mem[k]; }
+};
+const todayKey = () => new Date().toISOString().slice(0,10);
+
+let prefs = store.get('prefs', []);
+let days  = store.get('days', {});
+function today(){ if(!days[todayKey()]) days[todayKey()]={pts:0,breaks:0,mins:0}; return days[todayKey()]; }
+function saveDays(){ store.set('days', days); }
+
+/* ---------- toast ---------- */
+let toastT;
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+/* ---------- navigation ---------- */
+const NAV_SCREENS=['s-home','s-stats','s-settings'];
+function go(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const nav=document.getElementById('nav');
+  if(NAV_SCREENS.includes(id)){ nav.classList.add('show'); }else{ nav.classList.remove('show'); }
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('on'));
+  const nb=document.getElementById('nav-'+id.slice(2)); if(nb)nb.classList.add('on');
+  if(id==='s-home')renderHome();
+  if(id==='s-stats')renderStats();
+  if(id==='s-prefs')renderChips();
+}
+
+/* ---------- prefs ---------- */
+let selPrefs=new Set(prefs);
+function renderChips(){
+  selPrefs=new Set(prefs);
+  const g=document.getElementById('chipGrid'); g.innerHTML='';
+  CATS.forEach(c=>{
+    const d=document.createElement('div');
+    d.className='chip'+(selPrefs.has(c.id)?' sel':'');
+    d.innerHTML=`<span class="ico">${c.ico}</span>${c.name}<span class="tick">✓</span>`;
+    d.onclick=()=>{ selPrefs.has(c.id)?selPrefs.delete(c.id):selPrefs.add(c.id); d.classList.toggle('sel'); updatePrefsBtn(); };
+    g.appendChild(d);
+  });
+  updatePrefsBtn();
+}
+function updatePrefsBtn(){ document.getElementById('prefsDone').disabled = selPrefs.size===0; }
+function savePrefs(){
+  prefs=[...selPrefs]; store.set('prefs',prefs); store.set('prefsDate',todayKey());
+  go('s-home');
+}
+
+/* ---------- home ---------- */
+function renderHome(){
+  const el=document.getElementById('timerOpts'); el.innerHTML='';
+  [30,45,60].forEach(m=>{
+    const d=document.createElement('div'); d.className='t-opt';
+    d.innerHTML=`<div><div class="mins">${m} min</div><div class="lbl">then take a break</div></div>
+      <span class="pts-badge">+${TIMER_PTS[m]} pts</span>`;
+    d.onclick=()=>startTimer(m);
+    el.appendChild(d);
+  });
+  const t=today();
+  document.getElementById('hPts').textContent=t.pts;
+  document.getElementById('hBreaks').textContent=t.breaks;
+  document.getElementById('hStreak').textContent=streak();
+}
+
+/* ---------- timer ---------- */
+const RING_C = 2*Math.PI*128;
+document.getElementById('ringFill').style.strokeDasharray=RING_C;
+let timer={total:0,left:0,int:null,paused:false,ptsAwarded:0};
+
+function startTimer(mins){
+  timer.total=mins*60; timer.left=mins*60; timer.paused=false;
+  timer.ptsAwarded=TIMER_PTS[mins];
+  today().pts+=timer.ptsAwarded; saveDays();
+  toast(`+${timer.ptsAwarded} Move Points, timer started`);
+  clearInterval(timer.int);
+  timer.int=setInterval(tick,1000);
+  document.getElementById('pauseBtn').textContent='Pause';
+  document.getElementById('clockState').textContent='Running';
+  drawClock();
+  go('s-timer');
+}
+function drawClock(){
+  const m=Math.floor(timer.left/60), s=timer.left%60;
+  document.getElementById('clockTime').textContent=`${m}:${String(s).padStart(2,'0')}`;
+  document.getElementById('ringFill').style.strokeDashoffset=RING_C*(1-timer.left/timer.total);
+  document.title = timer.left>0 ? `${m}:${String(s).padStart(2,'0')} · Desk Break` : 'Desk Break';
+}
+function tick(){
+  if(timer.paused)return;
+  timer.left--; drawClock();
+  if(timer.left<=0){ clearInterval(timer.int); timerDone(); }
+}
+function togglePause(){
+  timer.paused=!timer.paused;
+  document.getElementById('pauseBtn').textContent=timer.paused?'Resume':'Pause';
+  document.getElementById('clockState').textContent=timer.paused?'Paused':'Running';
+}
+function cancelTimer(){
+  clearInterval(timer.int);
+  today().pts=Math.max(0,today().pts-timer.ptsAwarded); saveDays();
+  document.title='Desk Break';
+  go('s-home');
+}
+function finishTimerEarly(){ clearInterval(timer.int); timer.left=0; timerDone(); }
+function timerDone(){
+  document.title='Desk Break';
+  pickTask();
+  prepareReveal();
+  go('s-reveal');
+}
+
+/* ---------- task pick & reveal ---------- */
+let curTask=null, curDur=5, revealed=false;
+
+function pickTask(prev){
+  const pool=[];
+  (prefs.length?prefs:CATS.map(c=>c.id)).forEach(cid=>{
+    (TASKS[cid]||[]).forEach(t=>pool.push({cat:cid,...t}));
+  });
+  let pick;
+  do{ pick=pool[Math.floor(Math.random()*pool.length)]; }
+  while(pool.length>1 && prev && pick.name===prev.name);
+  curTask=pick;
+}
+function catOf(id){ return CATS.find(c=>c.id===id); }
+
+function prepareReveal(){
+  revealed=false;
+  document.getElementById('revealInner').classList.remove('flipped');
+  document.getElementById('revealBtn').style.visibility='visible';
+  document.getElementById('revealCont').style.visibility='hidden';
+  document.getElementById('revCat').textContent=catOf(curTask.cat).name;
+  document.getElementById('revName').textContent=curTask.name;
+  // soft shuffle text
+  const names=Object.values(TASKS).flat().map(t=>t.name);
+  const st=document.getElementById('shuffleTxt');
+  let n=0;
+  const shuf=setInterval(()=>{
+    st.textContent=names[Math.floor(Math.random()*names.length)];
+    if(++n>10){clearInterval(shuf); st.textContent='Tap the card…';}
+  },120);
+}
+function flipReveal(){
+  if(revealed)return; revealed=true;
+  document.getElementById('revealInner').classList.add('flipped');
+  document.getElementById('revealBtn').style.visibility='hidden';
+  document.getElementById('shuffleTxt').textContent='';
+  setTimeout(()=>{ document.getElementById('revealCont').style.visibility='visible'; renderTask(); },500);
+}
+
+/* ---------- task screen ---------- */
+let moveInt=null, moveLeft=0, moveRunning=false;
+
+function renderTask(){
+  const c=catOf(curTask.cat);
+  document.getElementById('taskCat').textContent=c.name;
+  // walking titles adapt to duration
+  document.getElementById('taskName').textContent =
+    curTask.cat==='walking' ? (curDur===5?'5-minute walk outside':'10-minute walk around the block') : curTask.name;
+  const ul=document.getElementById('taskInstr'); ul.innerHTML='';
+  curTask.instr.forEach(i=>{const li=document.createElement('li');li.textContent=i;ul.appendChild(li);});
+  document.getElementById('taskPts').textContent=`+${BASE_PTS[curDur]+c.bonus} pts`;
+  stopMove();
+}
+function setDur(d){
+  curDur=d;
+  document.getElementById('d5').classList.toggle('on',d===5);
+  document.getElementById('d10').classList.toggle('on',d===10);
+  renderTask();
+}
+function swapTask(){ pickTask(curTask); renderTask(); }
+function startMove(){
+  moveLeft=curDur*60; moveRunning=true;
+  document.getElementById('moveTimerWrap').style.display='block';
+  document.getElementById('startMoveBtn').disabled=true;
+  clearInterval(moveInt);
+  moveInt=setInterval(()=>{
+    moveLeft--;
+    const m=Math.floor(moveLeft/60),s=moveLeft%60;
+    document.getElementById('moveClock').textContent=`${m}:${String(s).padStart(2,'0')}`;
+    if(moveLeft<=0){clearInterval(moveInt); toast('Time. Nice work, hit Done.');}
+  },1000);
+  document.getElementById('moveClock').textContent=`${curDur}:00`;
+}
+function stopMove(){
+  clearInterval(moveInt); moveRunning=false;
+  document.getElementById('moveTimerWrap').style.display='none';
+  document.getElementById('startMoveBtn').disabled=false;
+}
+function completeMove(){
+  const c=catOf(curTask.cat);
+  const pts=BASE_PTS[curDur]+c.bonus;
+  const t=today();
+  t.pts+=pts; t.breaks+=1; t.mins+=curDur; saveDays();
+  stopMove();
+  toast(`+${pts} Move Points ✦`);
+  go('s-home');
+}
+function skipMove(){ stopMove(); go('s-home'); }
+
+/* ---------- stats ---------- */
+function streak(){
+  let s=0; const d=new Date();
+  // today counts if it has a break; otherwise start from yesterday
+  if(!( (days[todayKey()]||{}).breaks>0 )) d.setDate(d.getDate()-1);
+  while(true){
+    const k=d.toISOString().slice(0,10);
+    if((days[k]||{}).breaks>0){ s++; d.setDate(d.getDate()-1); } else break;
+  }
+  return s;
+}
+function bestThisWeek(){
+  let best=0; const d=new Date();
+  for(let i=0;i<7;i++){
+    const k=d.toISOString().slice(0,10);
+    best=Math.max(best,(days[k]||{}).pts||0);
+    d.setDate(d.getDate()-1);
+  }
+  return best;
+}
+function renderStats(){
+  const t=today();
+  document.getElementById('stPts').textContent=t.pts;
+  document.getElementById('stBreaks').textContent=t.breaks;
+  document.getElementById('stMins').textContent=t.mins;
+  document.getElementById('stStreak').textContent=streak();
+  document.getElementById('stBest').textContent=bestThisWeek();
+}
+
+/* ---------- settings ---------- */
+function toggleTheme(){
+  const light=document.getElementById('themeToggle').checked;
+  document.documentElement.dataset.theme=light?'light':'dark';
+  store.set('theme',light?'light':'dark');
+}
+function resetAll(){
+  if(!confirm('Reset all Desk Break data?'))return;
+  store.clear(); prefs=[]; days={};
+  location.reload?location.reload():go('s-welcome');
+}
+
+/* ---------- boot ---------- */
+(function boot(){
+  const theme=store.get('theme','dark');
+  document.documentElement.dataset.theme=theme;
+  document.getElementById('themeToggle').checked=theme==='light';
+  const onboarded=store.get('onboarded',false);
+  if(!onboarded){ store.set('onboarded',true); go('s-welcome'); return; }
+  // new day → re-ask prefs
+  if(store.get('prefsDate','')!==todayKey() || prefs.length===0){ go('s-prefs'); return; }
+  go('s-home');
+})();
+</script>
+</body>
+</html>

@@ -226,6 +226,11 @@
     <h2 class="mt8">Start a timer</h2>
     <p class="sub">Shorter timers earn more points. More breaks, more movement.</p>
     <div id="timerOpts"></div>
+    <p class="sub mt24" style="font-size:14px">Free right now? Skip the timer.</p>
+    <div class="task-actions" style="margin-top:10px">
+      <button class="btn btn-ghost" onclick="quickStart(5)">Move now · 5 min</button>
+      <button class="btn btn-ghost" onclick="quickStart(10)">Move now · 10 min</button>
+    </div>
     <div class="today-strip">
       <div class="card"><div class="v" id="hPts">0</div><div class="k">Points today</div></div>
       <div class="card"><div class="v" id="hBreaks">0</div><div class="k">Breaks</div></div>
@@ -516,6 +521,16 @@ function cancelTimer(){
 function finishTimerEarly(){ clearInterval(timer.int); timer.left=0; timerDone(); }
 function timerDone(){
   document.title='Desk Break';
+  pickTask();
+  prepareReveal();
+  go('s-reveal');
+}
+
+/* quick start: skip the timer, go straight to a movement */
+function quickStart(mins){
+  curDur=mins;
+  document.getElementById('d5').classList.toggle('on',mins===5);
+  document.getElementById('d10').classList.toggle('on',mins===10);
   pickTask();
   prepareReveal();
   go('s-reveal');
